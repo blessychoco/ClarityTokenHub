@@ -8,6 +8,8 @@
 (define-constant err-owner-only (err u100))
 (define-constant err-not-token-owner (err u101))
 (define-constant err-not-enough-balance (err u102))
+(define-constant err-invalid-recipient (err u103))
+(define-constant err-invalid-amount (err u104))
 
 ;; Get the token balance of the specified principal
 (define-read-only (get-balance (account principal))
@@ -36,11 +38,16 @@
 ;; Transfer tokens - implement SIP-010 transfer function
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
   (begin
+    ;; Security checks
     (asserts! (or (is-eq tx-sender sender)
                   (is-eq tx-sender contract-owner))
               err-not-token-owner)
     (asserts! (>= (ft-get-balance myclaritytoken sender) amount)
               err-not-enough-balance)
+    (asserts! (> amount u0) err-invalid-amount)
+    (asserts! (not (is-eq recipient sender)) err-invalid-recipient)
+    
+    ;; Perform transfer
     (match (ft-transfer? myclaritytoken amount sender recipient)
       success (begin
                 ;; Print memo if it exists
@@ -56,6 +63,8 @@
 (define-public (mint (amount uint) (recipient principal))
   (begin
     (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (> amount u0) err-invalid-amount)
+    (asserts! (not (is-eq recipient (as-contract tx-sender))) err-invalid-recipient)
     (ft-mint? myclaritytoken amount recipient)))
 
 ;; Burn tokens - only callable by token owner or contract owner
@@ -66,4 +75,5 @@
               err-not-token-owner)
     (asserts! (>= (ft-get-balance myclaritytoken owner) amount)
               err-not-enough-balance)
+    (asserts! (> amount u0) err-invalid-amount)
     (ft-burn? myclaritytoken amount owner)))
