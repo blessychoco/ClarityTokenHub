@@ -43,9 +43,11 @@
               err-not-enough-balance)
     (match (ft-transfer? myclaritytoken amount sender recipient)
       success (begin
-                ;; Handle memo printing - both arms return boolean
+                ;; Print memo if it exists
                 (if (is-some memo)
-                    (print (unwrap-panic memo))
+                    (begin
+                      (print (unwrap-panic memo))
+                      true)
                     true)
                 (ok true))
       error (err error))))
